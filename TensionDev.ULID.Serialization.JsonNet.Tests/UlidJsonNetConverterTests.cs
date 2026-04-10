@@ -17,28 +17,34 @@ namespace TensionDev.ULID.Serialization.JsonNet.Tests
         }
 
         [Theory]
-        [InlineData("00000000000000000000000000")]
-        [InlineData("7ZZZZZZZZZZZZZZZZZZZZZZZZZ")]
-        [InlineData("01ARZ3NDEKTSV4RRFFQ69G5FAV")]
-        public void TestReadJson(string validUlidString)
+        [ClassData(typeof(ReadJsonTestData))]
+        public void TestReadJson(JsonToken jsonToken, object value, bool throwsException)
         {
             // Arrange
             var readerMock = new Mock<JsonReader>(MockBehavior.Strict);
-            readerMock.SetupGet(r => r.TokenType).Returns(JsonToken.String);
-            readerMock.SetupGet(r => r.Value).Returns((object)validUlidString);
+            readerMock.SetupGet(r => r.TokenType).Returns(jsonToken);
+            readerMock.SetupGet(r => r.Value).Returns(value);
 
             var converter = new UlidJsonNetConverter();
 
             // existingValue must be non-nullable; obtain an instance via Parse to satisfy parameter constraints.
-            Ulid existingValue = Ulid.Parse(validUlidString);
+            Ulid existingValue = Ulid.Max;
             var serializer = new JsonSerializer();
 
-            // Act
-            Ulid result = converter.ReadJson(readerMock.Object, typeof(Ulid), existingValue, hasExistingValue: false, serializer: serializer);
+            if (throwsException)
+            {
+                // Act and Assert
+                Assert.Throws<JsonSerializationException>(() => converter.ReadJson(readerMock.Object, typeof(Ulid), existingValue, hasExistingValue: false, serializer: serializer));
+            }
+            else
+            {
+                // Act
+                Ulid result = converter.ReadJson(readerMock.Object, typeof(Ulid), existingValue, hasExistingValue: false, serializer: serializer);
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(validUlidString, result.ToString());
+                // Assert
+                Assert.NotNull(result);
+                Assert.Equal(value.ToString(), result.ToString());
+            }
         }
 
         [Theory]
